@@ -1,65 +1,291 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+
+type FilterResult = {
+  total: number;
+  ready: number;
+  sent: number;
+  skip: number;
+  invalid: number;
+  contacts: any[];
+};
+
+export default function WhatsAppPage() {
+  const [loadingFilter, setLoadingFilter] = useState(false);
+  const [loadingSend, setLoadingSend] = useState(false);
+
+  const [status, setStatus] = useState("Disconnected");
+
+  const [result, setResult] = useState<FilterResult>({
+    total: 0,
+    ready: 0,
+    sent: 0,
+    skip: 0,
+    invalid: 0,
+    contacts: [],
+  });
+
+  const [progress, setProgress] = useState({
+    total: 0,
+    sent: 0,
+    failed: 0,
+  });
+
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = (text: string) => {
+    setLogs((prev) => [
+      `[${new Date().toLocaleTimeString()}] ${text}`,
+      ...prev,
+    ]);
+  };
+
+  async function handleFilter() {
+    try {
+      setLoadingFilter(true);
+
+      addLog("Memulai filter kontak...");
+
+      const res = await fetch("/api/whatsapp/filter", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Filter gagal");
+      }
+
+      setResult(data);
+
+      addLog(`Filter selesai. ${data.ready} kontak siap dikirim.`);
+    } catch (err: any) {
+      addLog(err.message);
+      alert(err.message);
+    } finally {
+      setLoadingFilter(false);
+    }
+  }
+
+  async function handleSend() {
+    try {
+      setLoadingSend(true);
+
+      addLog("Memulai pengiriman...");
+
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contacts: result.contacts,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Pengiriman gagal");
+      }
+
+      setProgress({
+        total: data.total,
+        sent: data.sent,
+        failed: data.failed,
+      });
+
+      addLog("Pengiriman selesai.");
+    } catch (err: any) {
+      addLog(err.message);
+      alert(err.message);
+    } finally {
+      setLoadingSend(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-slate-100 p-8">
+      <div className="max-w-6xl mx-auto">
+
+        <h1 className="text-3xl font-bold mb-8">
+          WhatsApp Broadcast
+        </h1>
+
+        <div className="grid md:grid-cols-4 gap-5 mb-8">
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500">Status</p>
+
+            <p
+              className={`mt-2 text-xl font-bold ${
+                status === "Connected"
+                  ? "text-green-600"
+                  : "text-red-500"
+              }`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {status}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500">Total Database</p>
+
+            <p className="mt-2 text-3xl font-bold">
+              {result.total}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500">Siap Dikirim</p>
+
+            <p className="mt-2 text-3xl text-green-600 font-bold">
+              {result.ready}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5">
+            <p className="text-gray-500">Skip</p>
+
+            <p className="mt-2 text-3xl text-yellow-500 font-bold">
+              {result.skip}
+            </p>
+          </div>
+
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex gap-4 mb-8">
+
+          <button
+            onClick={handleFilter}
+            disabled={loadingFilter}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {loadingFilter
+              ? "Filtering..."
+              : "Filter Kontak"}
+          </button>
+
+          <button
+            onClick={handleSend}
+            disabled={loadingSend || result.ready === 0}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg"
           >
-            Documentation
-          </a>
+            {loadingSend
+              ? "Mengirim..."
+              : "Kirim Pesan"}
+          </button>
+
         </div>
-      </main>
-    </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+
+          <div className="bg-white rounded-xl shadow p-6">
+
+            <h2 className="font-bold text-xl mb-4">
+              Statistik
+            </h2>
+
+            <div className="space-y-3">
+
+              <div className="flex justify-between">
+                <span>Total</span>
+                <b>{result.total}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Ready</span>
+                <b>{result.ready}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Sudah Terkirim</span>
+                <b>{result.sent}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Skip</span>
+                <b>{result.skip}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Tidak Ada WA</span>
+                <b>{result.invalid}</b>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+
+            <h2 className="font-bold text-xl mb-4">
+              Progress Pengiriman
+            </h2>
+
+            <div className="w-full bg-gray-200 rounded-full h-4">
+
+              <div
+                className="bg-green-600 h-4 rounded-full transition-all"
+                style={{
+                  width:
+                    progress.total === 0
+                      ? "0%"
+                      : `${
+                          (progress.sent /
+                            progress.total) *
+                          100
+                        }%`,
+                }}
+              />
+
+            </div>
+
+            <div className="mt-4 space-y-2">
+
+              <div className="flex justify-between">
+                <span>Terkirim</span>
+                <b>{progress.sent}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Gagal</span>
+                <b>{progress.failed}</b>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Total</span>
+                <b>{progress.total}</b>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6 mt-8">
+
+          <h2 className="text-xl font-bold mb-4">
+            Log Aktivitas
+          </h2>
+
+          <div className="h-96 overflow-auto border rounded-lg bg-black text-green-400 p-4 font-mono text-sm">
+
+            {logs.length === 0 && (
+              <p>Belum ada aktivitas...</p>
+            )}
+
+            {logs.map((log, index) => (
+              <div key={index}>{log}</div>
+            ))}
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
   );
 }
