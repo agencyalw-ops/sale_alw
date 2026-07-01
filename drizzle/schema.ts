@@ -105,3 +105,78 @@ export const saleItems = mysqlTable("saleItems", {
 
 export type SaleItem = typeof saleItems.$inferSelect;
 export type InsertSaleItem = typeof saleItems.$inferInsert;
+
+/**
+ * WhatsApp Contacts - untuk menyimpan daftar kontak yang akan dikirim pesan
+ */
+export const whatsappContacts = mysqlTable("whatsappContacts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  namaInstansi: varchar("namaInstansi", { length: 255 }).notNull(),
+  waNumber: varchar("waNumber", { length: 20 }).notNull(),
+  alamat: text("alamat"),
+  kota: varchar("kota", { length: 100 }),
+  status: mysqlEnum("status", ["pending", "sent", "failed", "skipped"]).default("pending").notNull(),
+  sentAt: timestamp("sentAt"),
+  failureReason: text("failureReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WhatsappContact = typeof whatsappContacts.$inferSelect;
+export type InsertWhatsappContact = typeof whatsappContacts.$inferInsert;
+
+/**
+ * WhatsApp Templates - untuk menyimpan template pesan dengan variabel
+ */
+export const whatsappTemplates = mysqlTable("whatsappTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WhatsappTemplate = typeof whatsappTemplates.$inferSelect;
+export type InsertWhatsappTemplate = typeof whatsappTemplates.$inferInsert;
+
+/**
+ * WhatsApp Session - untuk menyimpan status koneksi dan QR code
+ */
+export const whatsappSessions = mysqlTable("whatsappSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  isConnected: boolean("isConnected").default(false).notNull(),
+  qrCode: text("qrCode"),
+  phoneNumber: varchar("phoneNumber", { length: 20 }),
+  lastActivity: timestamp("lastActivity"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WhatsappSession = typeof whatsappSessions.$inferSelect;
+export type InsertWhatsappSession = typeof whatsappSessions.$inferInsert;
+
+/**
+ * WhatsApp Campaign - untuk tracking campaign pengiriman pesan
+ */
+export const whatsappCampaigns = mysqlTable("whatsappCampaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  templateId: int("templateId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  totalContacts: int("totalContacts").default(0).notNull(),
+  sentCount: int("sentCount").default(0).notNull(),
+  failedCount: int("failedCount").default(0).notNull(),
+  skippedCount: int("skippedCount").default(0).notNull(),
+  status: mysqlEnum("campaignStatus", ["draft", "running", "completed", "paused", "cancelled"]).default("draft").notNull(),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WhatsappCampaign = typeof whatsappCampaigns.$inferSelect;
+export type InsertWhatsappCampaign = typeof whatsappCampaigns.$inferInsert;

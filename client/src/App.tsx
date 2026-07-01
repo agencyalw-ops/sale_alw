@@ -11,6 +11,7 @@ import CustomersPage from "./pages/Customers";
 import ProductsPage from "./pages/Products";
 import AdminPage from "./pages/Admin";
 import InvoicePage from "./pages/Invoice";
+import WhatsAppPage from "./pages/WhatsApp";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
 
@@ -43,6 +44,7 @@ function Router() {
       <Route path={"/sales"} component={SalesPage} />
       <Route path={"/customers"} component={CustomersPage} />
       <Route path={"/products"} component={ProductsPage} />
+      <Route path={"/whatsapp"} component={WhatsAppPage} />
       <Route path={"/invoice/:id"} component={InvoicePage} />
       {user.role === 'admin' && <Route path={"/admin"} component={AdminPage} />}
       <Route path={"/404"} component={NotFound} />

@@ -1,6 +1,6 @@
 import { eq, desc, and, like, gte, lte, between } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, customers, products, sales, saleItems, Customer, Product, Sale, SaleItem } from "../drizzle/schema";
+import { InsertUser, users, customers, products, sales, saleItems, Customer, Product, Sale, SaleItem, whatsappContacts, whatsappTemplates, whatsappSessions, whatsappCampaigns, WhatsappContact, WhatsappTemplate, WhatsappSession, WhatsappCampaign } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -342,4 +342,204 @@ export async function getTopProducts() {
   );
   
   return productDetails;
+}
+
+// ============ WHATSAPP CONTACTS QUERIES ============
+
+export async function createWhatsappContact(data: Omit<typeof whatsappContacts.$inferInsert, 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(whatsappContacts).values(data);
+  return result;
+}
+
+export async function getWhatsappContacts(userId: number, limit: number = 50, offset: number = 0, search?: string, status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  let conditions: any[] = [eq(whatsappContacts.userId, userId)];
+  
+  if (search) {
+    conditions.push(like(whatsappContacts.namaInstansi, `%${search}%`));
+  }
+  
+  if (status) {
+    conditions.push(eq(whatsappContacts.status, status as any));
+  }
+  
+  let query = db.select().from(whatsappContacts);
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+  
+  const result = await (query as any)
+    .orderBy(desc(whatsappContacts.createdAt))
+    .limit(limit)
+    .offset(offset);
+  
+  return result;
+}
+
+export async function getWhatsappContactById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappContacts)
+    .where(and(eq(whatsappContacts.id, id), eq(whatsappContacts.userId, userId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateWhatsappContact(id: number, data: Partial<typeof whatsappContacts.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(whatsappContacts).set(data).where(eq(whatsappContacts.id, id));
+}
+
+export async function deleteWhatsappContact(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(whatsappContacts).where(eq(whatsappContacts.id, id));
+}
+
+// ============ WHATSAPP TEMPLATES QUERIES ============
+
+export async function createWhatsappTemplate(data: Omit<typeof whatsappTemplates.$inferInsert, 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(whatsappTemplates).values(data);
+  return result;
+}
+
+export async function getWhatsappTemplates(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappTemplates)
+    .where(eq(whatsappTemplates.userId, userId))
+    .orderBy(desc(whatsappTemplates.createdAt));
+  
+  return result;
+}
+
+export async function getWhatsappTemplateById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappTemplates)
+    .where(and(eq(whatsappTemplates.id, id), eq(whatsappTemplates.userId, userId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateWhatsappTemplate(id: number, data: Partial<typeof whatsappTemplates.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(whatsappTemplates).set(data).where(eq(whatsappTemplates.id, id));
+}
+
+export async function deleteWhatsappTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(whatsappTemplates).where(eq(whatsappTemplates.id, id));
+}
+
+// ============ WHATSAPP SESSIONS QUERIES ============
+
+export async function getWhatsappSession(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappSessions)
+    .where(eq(whatsappSessions.userId, userId))
+    .limit(1);
+  
+  if (result.length > 0) {
+    return result[0];
+  }
+  
+  // Create new session if doesn't exist
+  const newSession = await db.insert(whatsappSessions).values({
+    userId,
+    isConnected: false,
+  });
+  
+  return await db.select().from(whatsappSessions)
+    .where(eq(whatsappSessions.userId, userId))
+    .limit(1)
+    .then(r => r[0]);
+}
+
+export async function updateWhatsappSession(userId: number, data: Partial<typeof whatsappSessions.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db.select().from(whatsappSessions)
+    .where(eq(whatsappSessions.userId, userId))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    await db.update(whatsappSessions).set(data).where(eq(whatsappSessions.userId, userId));
+  } else {
+    await db.insert(whatsappSessions).values({ userId, ...data } as any);
+  }
+  
+  return await db.select().from(whatsappSessions)
+    .where(eq(whatsappSessions.userId, userId))
+    .limit(1)
+    .then(r => r[0]);
+}
+
+// ============ WHATSAPP CAMPAIGNS QUERIES ============
+
+export async function createWhatsappCampaign(data: Omit<typeof whatsappCampaigns.$inferInsert, 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(whatsappCampaigns).values(data);
+  return result;
+}
+
+export async function getWhatsappCampaigns(userId: number, limit: number = 20, offset: number = 0) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappCampaigns)
+    .where(eq(whatsappCampaigns.userId, userId))
+    .orderBy(desc(whatsappCampaigns.createdAt))
+    .limit(limit)
+    .offset(offset);
+  
+  return result;
+}
+
+export async function getWhatsappCampaignById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(whatsappCampaigns)
+    .where(and(eq(whatsappCampaigns.id, id), eq(whatsappCampaigns.userId, userId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateWhatsappCampaign(id: number, data: Partial<typeof whatsappCampaigns.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(whatsappCampaigns).set(data).where(eq(whatsappCampaigns.id, id));
+}
+
+export async function deleteWhatsappCampaign(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(whatsappCampaigns).where(eq(whatsappCampaigns.id, id));
 }

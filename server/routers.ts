@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { whatsappRouter } from "./whatsappRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -16,6 +17,7 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
+  whatsapp: whatsappRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
